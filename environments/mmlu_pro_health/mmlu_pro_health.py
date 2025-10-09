@@ -36,7 +36,9 @@ def _build_few_shot(few_shot_examples: Dataset, use_think: bool) -> str:
     return few_shot_prompt
 
 
-def _to_vf_format(ds: Dataset, few_shot_examples: Dataset, shuffle: bool, use_think: bool) -> Dataset:
+def _to_vf_format(
+    ds: Dataset, few_shot_examples: Dataset, shuffle: bool, use_think: bool
+) -> Dataset:
     """
     Shape each row for SingleTurnEnv's defaults:
       - 'question': string the env will turn into chat messages
@@ -53,7 +55,9 @@ def _to_vf_format(ds: Dataset, few_shot_examples: Dataset, shuffle: bool, use_th
 
     def _format_row(row: dict) -> dict:
         question = row.get("question", "") or ""  # question string
-        opts = row.get("options", {}) or {}  # answer choices, map of letter to answer text
+        opts = (
+            row.get("options", {}) or {}
+        )  # answer choices, map of letter to answer text
 
         # lift the answer to top-level, normalize to a single letter
         answer_letter = (row.get("answer") or "").strip().upper()
@@ -102,11 +106,13 @@ def _to_vf_format(ds: Dataset, few_shot_examples: Dataset, shuffle: bool, use_th
             "info": info,
         }
 
-    return ds.map(_format_row, remove_columns=ds.column_names).filter(lambda row: row is not None)
+    return ds.map(_format_row, remove_columns=ds.column_names).filter(
+        lambda row: row is not None
+    )
 
 
 def load_environment(
-    num_few_shot: int = 5,
+    num_few_shot: int = 1,
     use_think: bool = False,
     shuffle: bool = False,
     **kwargs,
@@ -128,7 +134,9 @@ def load_environment(
 
     # -------- load dataset --------
     # the validation split is used for few-shot examples, following the MMLU-Pro eval script
-    test_raw, few_shot_examples = load_dataset("mkieffer/MMLU-Pro-Health", split=["test", "validation"])
+    test_raw, few_shot_examples = load_dataset(
+        "mkieffer/MMLU-Pro-Health", split=["test", "validation"]
+    )
 
     # -------- limit number of examples if specified --------
     if num_few_shot != -1:
@@ -136,16 +144,22 @@ def load_environment(
             print(
                 f"WARNING: num_few_shot={num_few_shot} is greater than the number of few-shot examples ({few_shot_examples.num_rows}). Using all examples."
             )
-        few_shot_examples = few_shot_examples.select(range(min(num_few_shot, len(few_shot_examples))))
+        few_shot_examples = few_shot_examples.select(
+            range(min(num_few_shot, len(few_shot_examples)))
+        )
 
     # -------- convert rows to vf format and shuffle row order --------
     few_shot_examples = few_shot_examples
-    test_ds = _to_vf_format(test_raw, few_shot_examples, shuffle=shuffle, use_think=use_think)
+    test_ds = _to_vf_format(
+        test_raw, few_shot_examples, shuffle=shuffle, use_think=use_think
+    )
     del test_raw, few_shot_examples  # free memory
 
     # -------- construct prompts and questions --------
     parser = (
-        vf.ThinkParser(extract_fn=extract_boxed_answer) if use_think else vf.Parser(extract_fn=extract_boxed_answer)
+        vf.ThinkParser(extract_fn=extract_boxed_answer)
+        if use_think
+        else vf.Parser(extract_fn=extract_boxed_answer)
     )
     system_prompt = THINK_BOXED_SYSTEM_PROMPT if use_think else BOXED_SYSTEM_PROMPT
 
